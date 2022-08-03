@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<head>
+	<th:block th:include="common/include :: header('服务单项列表')" />
+</head>
+<body class="gray-bg">
+	<div class="container-div">
+		<div class="row">
+			<div class="col-sm-12 search-collapse">
+				<form id="post-form">
+					<div class="select-list">
+						<ul>
+							<li>
+								名称：<input type="text" name="name"/>
+							</li>
+							<li>
+								是否套餐：<select name="carPackage" th:with="type=${@dict.getType('si_car_package')}">
+								<option value="">所有</option>
+								<option th:each="dict : ${type}" th:text="${dict.label}" th:value="${dict.value}"></option>
+							</select>
+							</li>
+							<li>
+								服务分类：<select name="serviceCatalog" th:with="type=${@dict.getType('si_service_catalog')}">
+								<option value="">所有</option>
+								<option th:each="dict : ${type}" th:text="${dict.label}" th:value="${dict.value}"></option>
+							</select>
+							</li>
+							<li>
+								审核状态：<select name="auditStatus" th:with="type=${@dict.getType('si_audit_status')}">
+								<option value="">所有</option>
+								<option th:each="dict : ${type}" th:text="${dict.label}" th:value="${dict.value}"></option>
+							</select>
+							</li>
+							<li>
+								上架状态：<select name="saleStatus" th:with="type=${@dict.getType('si_sale_status')}">
+								<option value="">所有</option>
+								<option th:each="dict : ${type}" th:text="${dict.label}" th:value="${dict.value}"></option>
+							</select>
+							</li>
+							<li>
+								<a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+							    <a class="btn btn-warning btn-rounded btn-sm" onclick="$.form.reset()"><i class="fa fa-refresh"></i>&nbsp;重置</a>
+							</li>
+						</ul>
+					</div>
+				</form>
+			</div>
+			
+			<div class="btn-group-sm" id="toolbar" role="group">
+				<a class="btn btn-success" onclick="$.operate.add()" shiro:hasPermission="system:post:add">
+	                <i class="fa fa-plus"></i> 添加
+	            </a>
+				<a class="disabled btn btn-primary" id="startAudit" onclick="startAudit()" shiro:hasPermission="system:post:edit">
+		            <i class="fa fa-edit"></i> 发起审核
+		        </a>
+	        </div>
+	        
+	        <div class="col-sm-12 select-table table-striped">
+			    <table id="bootstrap-table"></table>
+			</div>
+		</div>
+	</div>
+	<th:block th:include="common/include :: footer" />
+	<script th:inline="javascript">
+		// 是否是套餐的数据
+		var carPackageDatas = [[${@dict.getType('si_car_package')}]];
+		// 服务分类的数据
+		var serviceItemDatas = [[${@dict.getType('si_service_catalog')}]];
+		// 审核分类的数据
+		var auditStatusDatas = [[${@dict.getType('si_audit_status')}]];
+		// 上架状态的数据
+		var saleStatusDatas = [[${@dict.getType('si_sale_status')}]];
+		var prefix = ctx + "/business/serviceItem";
+		$(function() {
+		    var options = {
+		        url: prefix + "/query",
+		        createUrl: prefix + "/addPage",
+		        updateUrl: prefix + "/editPage?id={id}",
+		        removeUrl: prefix + "/remove",
+		        exportUrl: prefix + "/export",
+				modalName: "服务单项",	// 弹出的模态框标题名称
+		        columns: [{
+		            checkbox: true
+		        },
+		        {
+		            field: 'id',
+		            title: '客户id',
+					visible: false
+		        },
+		        {
+		            field: 'name',
+		            title: '服务项名称',
+		            sortable: true
+		        },
+		        {
+		            field: 'originalPrice',
+		            title: '服务项原价',
+		            sortable: true
+		        },
+				{
+					field: 'discountPrice',
+					title: '服务项折扣价',
+					sortable: true
+				},
+				{
+					field: 'carPackage',
+					title: '是否套餐',
+					sortable: true,
+					formatter: function(value, item, index) {
+						if (value) {
+							return "是";
+						} else {
+							return "否";
+						}
+					}
+				},
+				{
+					field: 'info',
+					title: '备注信息',
+					sortable: true,
+					formatter: function(value, row, index) {
+						return $.table.tooltip(value, 5, "open");
+					}
+				},
+				{
+					field: 'serviceCatalog',
+					title: '服务分类',
+					sortable: true,
+					formatter: function(value, item, index) {
+						return $.table.selectDictLabel(serviceItemDatas, value);
+					}
+				},
+				{
+					field: 'auditStatus',
+					title: '审核状态',
+					sortable: true,
+					formatter: function(value, item, index) {
+						return $.table.selectDictLabel(auditStatusDatas, value);
+					}
+				},
+				{
+					field: 'saleStatus',
+					title: '上架状态',
+					sortable: true,
+					formatter: function(value, item, index) {
+						return $.table.selectDictLabel(saleStatusDatas, value);
+					}
+				},
+		        {
+		            title: '操作',
+		            align: 'center',
+		            formatter: function(value, row, index) {
+		                var actions = [];
+						var editClass = '';
+						// 如果是已上架或者审核中的服务项，让编辑按钮变成灰色
+						if (row.saleStatus == 1 || row.auditStatus == 1) {
+							editClass = "disabled";
+						}
+		                actions.push('<a class="btn btn-success btn-xs '+ editClass +'" href="javascript:void(0)" ' +
+								'onclick="$.operate.edit(\'' + row.id + '\')"><i class="fa fa-edit"></i>编辑</a> ');
+						if (row.saleStatus) {
+							// 上架状态
+							actions.push('<a class="btn btn-danger btn-xs" href="javascript:void(0)"' +
+									' onclick="saleOff(\'' + row.id + '\', this)"><i class="fa fa-remove"></i>下架</a>');
+						} else {
+							// 下架状态
+							// 如果是套餐，则必须审核通过才能上架
+							let saleOnClass = '';
+							if (row.carPackage && row.auditStatus != 2) {
+								saleOnClass = 'disabled';
+							}
+							actions.push('<a class="btn btn-info btn-xs ' + saleOnClass + '" href="javascript:void(0)"' +
+									' onclick="saleOn(\'' + row.id + '\')"><i class="fa fa-remove"></i>上架</a> ');
+						}
+						return actions.join('');
+					}
+		        }]
+		    };
+		    $.table.init(options);
+		});
+
+		// 点击上架后执行的回调函数
+		function saleOn(id) {
+			// 弹出确认框
+			$.modal.confirm("确定要上架吗？", function () {
+				// 发送 Ajax 请求，携带 id 作为参数
+				$.operate.get("/business/serviceItem/saleOn?id=" + id);
+			});
+		}
+
+		// 点击下架后执行的回调函数
+		function saleOff(id) {
+			// 弹出确认框
+			$.modal.confirm("确定要下架吗？", function () {
+				// 发送 Ajax 请求，携带 id 作为参数
+				$.operate.get("/business/serviceItem/saleOff?id=" + id);
+			})
+		}
+
+		// 为表单绑定事件：页面加载时，全选按钮点击，单选按钮点击
+		$("#bootstrap-table").on("check.bs.table uncheck.bs.table check-all.bs.table uncheck-all.bs.table load-success.bs.table", function () {
+			// 获取当前选中的数据
+			var rows = $('#bootstrap-table').bootstrapTable('getSelections');
+
+			// 如果选中的数量大于 1 或 等于 0 ，让按钮变灰
+			if (rows.length > 1 || rows.length == 0) {
+				$("#startAudit").addClass("disabled");
+				return;
+			}
+
+			let row = rows[0];
+			// 如果选中的数据不是套餐，则让按钮变灰
+			if (row.carPackage == 0) {
+				$("#startAudit").addClass("disabled");
+				return;
+			}
+
+			// 如果选中的数据状态是审核中或者审核通过，则让按钮变灰
+			if (row.auditStatus == 1 || row.auditStatus == 2) {
+				$("#startAudit").addClass("disabled");
+				return;
+			}
+
+			$("#startAudit").removeClass("disabled");
+		});
+
+		// 点击发起审核后执行的函数
+		function startAudit() {
+			// 获取当前选中的数据
+			var row = $('#bootstrap-table').bootstrapTable('getSelections')[0];
+			// 发送 Ajax 请求
+			$.modal.open("审核详情页面", "/business/serviceItem/startAuditPage?id=" + row.id);
+		}
+	</script>
+</body>
+</html>

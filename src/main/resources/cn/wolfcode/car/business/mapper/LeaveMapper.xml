@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="cn.wolfcode.car.business.mapper.LeaveMapper">
+    <resultMap id="BaseResultMap" type="cn.wolfcode.car.business.domain.Leave">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="reason" property="reason"/>
+        <result column="startTime" property="startTime"/>
+        <result column="endTime" property="endTime"/>
+        <result column="auditId" property="auditId"/>
+        <result column="status" property="status"/>
+        <result column="info" property="info"/>
+        <result column="user_name" property="auditor.userName"/>
+    </resultMap>
+    <delete id="deleteByPrimaryKey">
+        delete
+        from bus_leave
+        where id = #{id}
+    </delete>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into bus_leave (name, reason, startTime, endTime, auditId, status, info)
+        values (#{name}, #{reason}, #{startTime}, #{endTime}, #{auditId}, #{status}, #{info})
+    </insert>
+    <update id="updateByPrimaryKey">
+        update bus_leave
+        set name        = #{name},
+            reason      = #{reason},
+            info        = #{info},
+            instance_id = #{instanceId},
+            status      = #{status},
+            auditId     = #{auditId}
+        where id = #{id}
+    </update>
+    <select id="selectByPrimaryKey" resultMap="BaseResultMap">
+        select l.id,
+               l.name,
+               l.reason,
+               l.startTime,
+               l.endTime,
+               l.auditId,
+               l.status,
+               l.info,
+               u.user_name
+        from bus_leave l
+                 left join sys_user u on l.auditId = u.id
+        where l.id = #{id}
+    </select>
+    <select id="selectAll" resultMap="BaseResultMap">
+        select id,
+               name,
+               reason,
+               startTime,
+               endTime,
+               auditId,
+               status,
+               info
+        from bus_leave
+    </select>
+    <select id="selectForList" resultMap="BaseResultMap">
+        select l.id,
+        l.name,
+        l.reason,
+        l.startTime,
+        l.endTime,
+        l.auditId,
+        l.status,
+        l.info,
+        user.user_name
+        from bus_leave l left join sys_user user on l.auditId = user.id
+        <where>
+            <if test="startTime != null">
+                and l.startTime &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                and l.startTime &lt;= #{endTime}
+            </if>
+            <if test="status != null">
+                and l.status = #{status}
+            </if>
+            <if test="auditorId != null">
+                and l.auditId = #{auditorId}
+            </if>
+            <if test="name != null and name != ''">
+                and l.info like concat('%', #{name}, '%')
+            </if>
+        </where>
+    </select>
+</mapper>

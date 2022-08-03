@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" >
+<head>
+    <th:block th:include="common/include :: header('修改流程定义')" />
+</head>
+<body class="white-bg">
+<div class="wrapper wrapper-content animated fadeInRight ibox-content">
+    <form class="form-horizontal m" id="form-bpmnInfo-edit" >
+        <input type="hidden" name="path" id="bpmnInfoPath">
+        <div class="form-group">
+            <label class="col-sm-3 control-label"></label>
+            <div id="uploadBtn" class="col-sm-8 fileinput fileinput-new" data-provides="fileinput">
+                        <span class="btn btn-outline-secondary btn-file">
+                            <span class="fileinput-new">
+                                <a class="btn btn-warning btn-sm"><i class="fa fa-upload"></i>&nbsp;流程文件部署</a>
+                            </span>
+                            <input type="file" name="file" id="bpmnInfoinition" multiple>
+                        </span>
+                <span class="fileinput-filename"></span>
+                <a href="#" class="close fileinput-exists" data-dismiss="fileinput"
+                   style="float: none">&times;</a>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label">流程类型：</label>
+            <div class="col-sm-8">
+                <select name="bpmnType" class="form-control m-b" th:with="type=${@dict.getType('bus_audit_type')}">
+                    <option th:each="dict : ${type}" th:text="${dict.label}" th:value="${dict.value}"></option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-3 control-label">备注信息：</label>
+            <div class="col-sm-8">
+                <textarea name="info" class="form-control"></textarea>
+            </div>
+        </div>
+    </form>
+</div>
+<th:block th:include="common/include :: footer" />
+<th:block th:include="common/include :: jasny-bootstrap"/>
+<script th:inline="javascript">
+    var prefix = ctx + "/business/bpmnInfo";
+    $("#form-bpmnInfo-edit").validate({
+        focusCleanup: true
+    });
+
+    function submitHandler() {
+        if ($.validate.form()) {
+            $.operate.save(prefix + "/deploy", $('#form-bpmnInfo-edit').serialize());
+        }
+    }
+
+    // 为文件上传表单绑定值改变时间，当用户选择文件之后，将文件上传到服务器中
+    $("#bpmnInfoinition").on("change.bs.fileinput", function () {
+        // 发送 Ajax 请求，上传文件内容
+        let formData = new FormData();
+        // 添加文件数据
+        formData.append("file", $("#bpmnInfoinition")[0].files[0]);
+        // 发送 Ajax 请求
+        $.ajax({
+            url: "/business/bpmnInfo/uploadBpmnFile",
+            type: "post",
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function (result) {
+                if (result.code === 0) {
+                    // 如果上传成功，将服务器返回的文件路径保存到隐藏域中
+                    $("#bpmnInfoPath").val(result.data);
+                } else {
+                    $.modal.msgError(result.msg);
+                    // 如果上传失败，则清空已选择文件
+                    $("#uploadBtn").fileinput('clear');
+                }
+            }
+        })
+    })
+
+</script>
+</body>
+</html>
